@@ -1,0 +1,13 @@
+# Model artifacts and generated data stay on Hugging Face or local storage
+*.safetensors
+*.gguf
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.exl3
+*.whl
+__pycache__/
+.DS_Store
+.env

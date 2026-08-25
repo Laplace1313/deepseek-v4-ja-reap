@@ -1,0 +1,77 @@
+name: deepseek-v4-ja-reap-release
+services:
+  deepseek-v4-ja:
+    image: ghcr.io/0xsero/deepseek-v4-flash-0731-spark-sparkinfer@sha256:2e077489a83a0360952828051fe7f7a32c1801e5ce8436d85f7267583d614ff4
+    pull_policy: missing
+    restart: on-failure:1
+    network_mode: host
+    ipc: host
+    shm_size: 16gb
+    entrypoint: ["/bin/bash", "-lc", "bash /patch-run-entrypoint.sh && exec /opt/recipe/scripts/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "5", "http://127.0.0.1:${PORT:-8009}/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20m
+      retries: 3
+    environment:
+      PORT: "${PORT:-8009}"
+      HOST: "127.0.0.1"
+      SERVED_MODEL_NAME: deepseek-v4-ja-uncensored-0731
+      MODEL_PATH: /models/tp1
+      SPEC_MODEL_PATH: /models/dspark-draft-k64
+      MAX_MODEL_LEN: "256000"
+      MAX_NUM_SEQS: "1"
+      MAX_NUM_BATCHED_TOKENS: "8224"
+      VLLM_DSV4_PADDED_NVFP4: "0"
+      KV_FP8_ROPE: "0"
+      MODE: dspark
+      DRAFT_SAMPLE_METHOD: probabilistic
+      DSPARK_TOKENS: "5"
+      DSPARK_CAPACITY: "0"
+      DSPARK_DYNAMIC_DRAFT_DEPTH: "0"
+      DSPARK_DYNAMIC_DRAFT_DEPTH_WINDOW: "8"
+      DSPARK_DRAFT_EXPERTS: "64"
+      DSPARK_FP8_DRAFT_HEAD: "1"
+      DSPARK_STRUCTURED_EXPERTS_PER_CATEGORY: "16"
+      VLLM_USE_B12X_WO_PROJECTION: "1"
+      GPU_MEMORY_UTILIZATION: "${GPU_MEMORY_UTILIZATION:-0.949}"
+      VERIFY_MODEL_CHECKSUMS: "1"
+      MAX_CUDAGRAPH_CAPTURE_SIZE: "6"
+      CUDAGRAPH_CAPTURE_SIZES: "6"
+      VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
+      EXTRA_VLLM_ARGS: "--long-prefill-token-threshold 1024"
+      DEFAULT_CHAT_TEMPLATE_KWARGS_THINKING: "false"
+      DEFAULT_CHAT_TEMPLATE_KWARGS_EFFORT: "max"
+      KV_OFFLOAD_GB: "0"
+      VLLM_USE_SIMPLE_KV_OFFLOAD: "0"
+      VLLM_DSPARK_POSITION_ADAPTER_PATH: /models/dspark-position-adapter/position-adapter.safetensors
+      VLLM_DSPARK_POSITION_ADAPTER_SCALE: "1.0"
+      VLLM_DSPARK_POSITION_ADAPTER_ACTIVATION: "none"
+      VLLM_DSPARK_POSITION_ADAPTER_TOPK: "0"
+      VLLM_DSPARK_DRAFT_TOPK: "0"
+    volumes:
+      - ../:/models/tp1:ro
+      - ../dspark-draft-k64:/models/dspark-draft-k64:ro
+      - ../position-adapter:/models/dspark-position-adapter:ro
+      - deepseek-v4-ja-cache:/cache
+      - ./wheels:/runtime-wheels:ro
+      - ./entrypoint-toolfix.sh:/patch-run-entrypoint.sh:ro
+      - ./entrypoint-256k.sh:/opt/recipe/scripts/entrypoint.sh:ro
+      - ./serve-ds4-flash.sh:/opt/vllm/serve-ds4-flash.sh:ro
+      - ./sparkinfer-fused-moe-impl.py:/opt/sparkinfer/sparkinfer/moe/fused_moe/_impl.py:ro
+      - ./sparkinfer-tiny-decode.py:/opt/sparkinfer/sparkinfer/moe/_shared/kernels/tiny_decode.py:ro
+      - ./sparkinfer-prefill.py:/opt/sparkinfer/sparkinfer/attention/_shared/mla/prefill.py:ro
+      - ./sparkinfer-prefill-mg.py:/opt/sparkinfer/sparkinfer/attention/_shared/mla/prefill_mg.py:ro
+      - ./dspark.py:/opt/vllm/vllm/models/deepseek_v4/nvidia/dspark.py:ro
+      - ./qwen3_dspark.py:/opt/vllm/vllm/model_executor/models/qwen3_dspark.py:ro
+      - ./speculator.py:/opt/vllm/vllm/v1/worker/gpu/spec_decode/dspark/speculator.py:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+volumes:
+  deepseek-v4-ja-cache:
