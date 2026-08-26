@@ -10,20 +10,31 @@ DeepSeek V4 Flash JA REAP K216を標準MMLU全57分野で評価した結果で�
 | カテゴリ | 正答数 | Accuracy |
 |---|---:|---:|
 | Social Sciences | 2825/3077 | 91.81% |
-| Stem | 2783/3153 | 88.27% |
+| STEM | 2783/3153 | 88.27% |
 | Other | 2701/3107 | 86.93% |
 | Humanities | 3772/4705 | 80.17% |
 
 ## 評価条件
 
 ```text
-benchmark: MMLU full (57 subjects, 14,042 questions)
+benchmark/task: lm-eval `mmlu` group, 57 default multiple-choice tasks
+dataset: cais/mmlu
+dataset revision: not explicitly pinned by lm-eval 0.4.9.1
+test split: test
+few-shot split: dev
+few-shot sampler: first_n
+prompt: question + A/B/C/D choices + `Answer:`
+choice scoring: multiple-choice log-likelihood over A/B/C/D
 num_fewshot: 5
 batch_size: 1
 num_concurrent: 1
 backend: lm-eval local-completions /v1/completions
 tokenizer: deepseek-ai/DeepSeek-V4-Flash-0731
 tokenized_requests: false
+max_retries: 5
+timeout: 300
+max_length: 256000
+system instruction/chat template: none
 lm-eval: 0.4.9.1
 seeds: random=0, numpy=1234, torch=1234, fewshot=1234
 model: DeepSeek-V4-Flash-0731-JA-REAP-K216 EXL3 3.0 bpw TP1
@@ -31,6 +42,30 @@ draft: K64 DSpark, K5 probabilistic
 context: 256,000
 GPU memory utilization: 0.945
 ```
+
+lm-eval 0.4.9.1のtask templateは、`cais/mmlu`の`test` splitを評価し、`dev` splitの先頭5件をfew-shot例として使います。dataset revisionはtask定義で固定されていないため、将来の完全再現ではこの点が制約になります。57個のtask hashは機械可読JSONに保存しています。
+
+### 再現コマンド
+
+公開Composeの既定値は`GPU_MEMORY_UTILIZATION=0.949`です。この評価では起動時の空きメモリに合わせて`0.945`を明示しました。
+
+```bash
+GPU_MEMORY_UTILIZATION=0.945 \
+  docker compose -f runtime/compose.example.yml up -d
+
+uv run lm-eval \
+  --model local-completions \
+  --model_args 'model=deepseek-v4-ja-uncensored-0731,base_url=http://127.0.0.1:8009/v1/completions,tokenizer=deepseek-ai/DeepSeek-V4-Flash-0731,tokenized_requests=False,num_concurrent=1,max_retries=5,timeout=300,max_length=256000' \
+  --tasks mmlu \
+  --num_fewshot 5 \
+  --batch_size 1 \
+  --seed 0,1234,1234,1234 \
+  --log_samples \
+  --output_path results/mmlu-full-5shot \
+  --verbosity INFO
+```
+
+実行時はMac上のローカル転送ポート`18009`を使用しました。上記はDGX Spark上で直接再実行するため`8009`へ置き換えています。評価意味論は同一です。
 
 ## 57分野
 
@@ -101,8 +136,11 @@ GPU memory utilization: 0.945
 - 生サンプル、SQLite cache、ローカルパス、環境dumpはサイズ・プライバシーのためGitへ含めない。
 - 集計値と全57分野の機械可読データは[`mmlu-full-5shot-20260827.json`](mmlu-full-5shot-20260827.json)に保存。
 
-## モデルとクレジット
+## モデル・ベンチマークとクレジット
 
 - Model: [Laplace1313/DeepSeek-V4-Flash-0731-JA-REAP-K216-EXL3-3bpw-DGX-Spark](https://huggingface.co/Laplace1313/DeepSeek-V4-Flash-0731-JA-REAP-K216-EXL3-3bpw-DGX-Spark)
 - Base model: [deepseek-ai/DeepSeek-V4-Flash-0731](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
-- ライセンスと上流クレジットはリポジトリの[`LICENSES/`](../LICENSES/)および[`NOTICE.md`](../NOTICE.md)を参照。
+- MMLU dataset: [`cais/mmlu`](https://huggingface.co/datasets/cais/mmlu), MIT License
+- MMLU paper: Dan Hendrycks et al., [*Measuring Massive Multitask Language Understanding*](https://arxiv.org/abs/2009.03300), ICLR 2021
+- MMLU reference implementation: [`hendrycks/test`](https://github.com/hendrycks/test), MIT License
+- Model/runtimeのライセンスと上流クレジットはリポジトリの[`LICENSES/`](../LICENSES/)および[`NOTICE.md`](../NOTICE.md)を参照。
