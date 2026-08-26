@@ -82,12 +82,13 @@ DGX Spark 1台、256Kコンテキスト、OpenAI互換SSEで計測していま�
 
 | 評価 | 結果 |
 |---|---:|
+| MMLU full 5-shot（全57分野・14,042問） | **86.03%**（12,081/14,042） |
 | 日本語プロンプト | 50/50 |
 | ツール呼び出し | 6/6 |
 | HumanEval（50問） | 96% |
 | MBPP（50問） | 84% |
 
-測定条件の詳細は[Hugging Faceのモデルカード](https://huggingface.co/Laplace1313/DeepSeek-V4-Flash-0731-JA-REAP-K216-EXL3-3bpw-DGX-Spark)に掲載しています。
+MMLUの全条件・カテゴリ別・57分野別結果は[`benchmarks/mmlu-full-5shot-20260827.md`](benchmarks/mmlu-full-5shot-20260827.md)に掲載しています。その他の測定条件は[Hugging Faceのモデルカード](https://huggingface.co/Laplace1313/DeepSeek-V4-Flash-0731-JA-REAP-K216-EXL3-3bpw-DGX-Spark)を参照してください。
 
 ## 互換性
 
